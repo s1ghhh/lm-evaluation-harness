@@ -1,12 +1,14 @@
 import copy
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Literal, Optional, Tuple, Union
+
 
 import torch
 import torch.nn.functional as F
 import transformers
-from accelerate import Accelerator, DistributedType, find_executable_batch_size
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs, find_executable_batch_size
 from packaging import version
 from peft import PeftModel
 from peft import __version__ as PEFT_VERSION
@@ -20,6 +22,7 @@ from lm_eval import utils
 from lm_eval.api.instance import Instance
 from lm_eval.api.model import LM
 from lm_eval.api.registry import register_model
+
 from lm_eval.utils import Collator, stop_sequences_criteria
 
 
@@ -132,7 +135,8 @@ class HFLM(LM):
             assert isinstance(batch_size, (int, str))
 
             gpus = torch.cuda.device_count()
-            accelerator = Accelerator()
+            accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
+            accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
 
             if not (parallelize or accelerator.num_processes > 1):
                 # use user-passed device
